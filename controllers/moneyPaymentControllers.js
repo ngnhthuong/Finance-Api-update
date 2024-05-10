@@ -7,16 +7,16 @@ dotenv.config();
 module.exports = {
   addGroup: async (req, res) => {
     try {
-      const {userId} = req.params;
+      const { userId } = req.params;
       validIdMongo(userId);
 
       const user = await FinanceUserModel.findById(userId);
-      
+
       if (!user) {
         return res.status(404).json({ error: "User not found" });
       }
 
-      const { name_group, member} = req.body;
+      const { name_group, member } = req.body;
 
       const newGroup = await moneyPaymentModel.create({
         name_group,
@@ -33,7 +33,7 @@ module.exports = {
       res.status(500).json({ error: "Failed to add addGroup" });
     }
   },
-  
+
   updateMember: async (req, res) => {
     try {
       const { groupId, memberId, member_name } = req.body;
@@ -63,7 +63,7 @@ module.exports = {
       });
 
       await group.save();
-      res.status(200).json({ message: "Member updated successfulls"});
+      res.status(200).json({ message: "Member updated successfulls" });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Failed to update member" });
@@ -77,7 +77,7 @@ module.exports = {
       validIdMongo(groupId);
 
       const group = await moneyPaymentModel.findById(groupId);
-      console.log(group)
+      console.log(group);
       if (!group) {
         return res.status(404).json({ error: "User not found" });
       }
@@ -129,35 +129,39 @@ module.exports = {
   addPayList: async (req, res) => {
     try {
       const { groupId, memberId, member_name, value, note } = req.body;
-  
+
       validIdMongo(groupId);
-  
+
       const group = await moneyPaymentModel.findById(groupId);
-  
+
       if (!group) {
         return res.status(404).json({ error: "Group not found" });
       }
-  
+
       // Check if member already exists in the pay list
       const existingMemberIndex = group.pay_list.findIndex(
         (payment) => payment.member_id === memberId
       );
-  
+
       if (existingMemberIndex !== -1) {
-        return res.status(400).json({ error: "Member already exists in pay list" });
+        return res
+          .status(400)
+          .json({ error: "Member already exists in pay list" });
       }
-  
+
       const newPayment = {
         member_id: memberId,
         member_name,
         value: value || 0, // Set default value if not provided
         note: note || "_", // Set default note if not provided
       };
-  
+
       group.pay_list.push(newPayment);
-  
+
       await group.save();
-      res.status(201).json({ message: "Payment added successfully", newPayment });
+      res
+        .status(201)
+        .json({ message: "Payment added successfully", newPayment });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Failed to add payment" });
@@ -166,7 +170,8 @@ module.exports = {
 
   updatePayList: async (req, res) => {
     try {
-      const { groupId, paylistId, member_id,member_name, value, note } = req.body;
+      const { groupId, paylistId, member_id, member_name, value, note } =
+        req.body;
 
       validIdMongo(groupId);
       validIdMongo(paylistId);
@@ -190,7 +195,7 @@ module.exports = {
       group.pay_list[paylistIndex].note = note;
 
       await group.save();
-      res.status(200).json({ message: "Member updated successfulls"});
+      res.status(200).json({ message: "Member updated successfulls" });
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Failed to update member" });
@@ -226,7 +231,6 @@ module.exports = {
       res.status(500).json({ error: "Failed to delete member" });
     }
   },
-
 
   deleteGroup: async (req, res) => {
     try {
@@ -267,15 +271,111 @@ module.exports = {
       if (!group) {
         return res.status(404).json({ error: "group not found" });
       }
-      
-      console.log(group)
 
-      res.status(200).json(group);
+      const lstMoneyPayment = group;
+
+      function separateMoney(lstMoneyPayment) {
+        let totalPayment = lstMoneyPayment.pay_list.reduce(
+          (acc, paymentNote) => acc + paymentNote.value,
+          0
+        );
+        return totalPayment / lstMoneyPayment.member.length;
+      }
+
+      function paymentHigherLower(lstMoneyPayment, averageMoney) {
+        let lstHigherAverage = [];
+        let lstLowerAverage = [];
+
+        for (let person of lstMoneyPayment.member) {
+          let totalPayment = 0;
+          for (let payment of lstMoneyPayment.pay_list) {
+            if (payment.member_name === person.member_name) {
+              totalPayment += payment.value;
+            }
+          }
+
+          if (totalPayment > averageMoney) {
+            lstHigherAverage.push({
+              member: person.member_name,
+              total_money: totalPayment,
+              money_receive: totalPayment - averageMoney,
+              receive: 0,
+            });
+          } else {
+            lstLowerAverage.push({
+              member: person.member_name,
+              total_money: totalPayment,
+              money_pay: averageMoney - totalPayment,
+              pay: averageMoney - totalPayment,
+            });
+          }
+        }
+
+        return [lstHigherAverage, lstLowerAverage];
+      }
+
+      function paymentRecommend(lstHigherAverage, lstLowerAverage) {
+        let lstPayStatus = [];
+
+        for (let receivePerson of lstHigherAverage) {
+          let receiveMoney = receivePerson.receive;
+
+          for (let payPerson of lstLowerAverage) {
+            if (payPerson.pay !== 0) {
+              if (receivePerson.receive < receivePerson.money_receive) {
+                if (
+                  receiveMoney + payPerson.pay <=
+                  receivePerson.money_receive
+                ) {
+                  lstPayStatus.push({
+                    receive_people: receivePerson.member,
+                    pay_people: payPerson.member,
+                    money_pay: payPerson.pay,
+                  });
+                  payPerson.pay = 0;
+                } else if (
+                  receiveMoney + payPerson.pay >
+                  receivePerson.money_receive
+                ) {
+                  let moneyResidual =
+                    receiveMoney + payPerson.pay - receivePerson.money_receive;
+                  lstPayStatus.push({
+                    receive_people: receivePerson.member,
+                    pay_people: payPerson.member,
+                    money_pay: payPerson.pay - moneyResidual,
+                  });
+                  payPerson.pay = moneyResidual;
+                }
+              }
+            }
+          }
+        }
+
+        return lstPayStatus;
+      }
+
+      // Usage
+      let averageMoney = separateMoney(lstMoneyPayment);
+      let [higher, lower] = paymentHigherLower(lstMoneyPayment, averageMoney);
+      let recommendations = paymentRecommend(higher, lower);
+
+      console.log("average",averageMoney);
+      console.log("higher",higher);
+      console.log("lower",lower);
+      console.log("recommend",recommendations);
+
+      let result = {
+        average: averageMoney,
+        highers: higher,
+        lowers: lower,
+        recommendations: recommendations,
+      };
+
+
+      res.status(200).json(result);
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: "Failed to calculate group" });
     }
   },
-
-  
 };
