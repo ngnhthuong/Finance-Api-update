@@ -79,7 +79,7 @@ module.exports = {
       const group = await moneyPaymentModel.findById(groupId);
       console.log(group);
       if (!group) {
-        return res.status(404).json({ error: "User not found" });
+        return res.status(404).json({ error: "group not found" });
       }
 
       const newMember = {
@@ -139,15 +139,6 @@ module.exports = {
       }
 
       // Check if member already exists in the pay list
-      const existingMemberIndex = group.pay_list.findIndex(
-        (payment) => payment.member_id === memberId
-      );
-
-      if (existingMemberIndex !== -1) {
-        return res
-          .status(400)
-          .json({ error: "Member already exists in pay list" });
-      }
 
       const newPayment = {
         member_id: memberId,
@@ -179,7 +170,7 @@ module.exports = {
       const group = await moneyPaymentModel.findById(groupId);
 
       if (!group) {
-        return res.status(404).json({ error: "User not found" });
+        return res.status(404).json({ error: "Group not found" });
       }
 
       const paylistIndex = group.pay_list.findIndex(
@@ -211,7 +202,7 @@ module.exports = {
       const group = await moneyPaymentModel.findById(groupId);
 
       if (!group) {
-        return res.status(404).json({ error: "User not found" });
+        return res.status(404).json({ error: "Group not found" });
       }
 
       const paylistIndex = group.pay_list.findIndex(
@@ -253,7 +244,6 @@ module.exports = {
       const deleteGroup = user.moneypayment.splice(groupIndex, 1)[0];
       await user.save();
 
-      // Xoá group khỏi cơ sở dữ liệu
       await moneyPaymentModel.findByIdAndDelete(deleteGroup);
 
       res.status(200).json(deleteGroup);
@@ -354,7 +344,7 @@ module.exports = {
         return lstPayStatus;
       }
 
-      // Usage
+      // Usage func for calculate group
       let averageMoney = separateMoney(lstMoneyPayment);
       let [higher, lower] = paymentHigherLower(lstMoneyPayment, averageMoney);
       let recommendations = paymentRecommend(higher, lower);
