@@ -1,0 +1,38 @@
+{
+    "id": 123,
+    "name": "dalat",
+    "member": [
+        {
+          "member": "Thuong"
+        },
+        {
+          "member": "Loi"
+        },
+        {
+        
+          "member": "Khoi"
+        },
+        {
+          "member": "Sy",
+        }
+    ],
+    "payment_people": [
+        {
+            "member": "Thuong",
+            "notes": "payment for restaurant",
+            "money": 1000
+        },
+         {
+
+            "member": "Loi",
+            "notes": "payment for restaurant",
+            "money": 1000
+        },
+         {
+            "id": 222,
+            "member": "Khoi",
+            "notes": "payment for restaurant",
+            "money": 1000
+        }
+    ],
+}
